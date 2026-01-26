@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!-- saved from url=(0059)file:///C:/Users/Richard/Downloads/banner-bemvindo-ngc.html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="./index_files/css2" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Open Sans', sans-serif; 
+            background: transparent;
+        }
+        
+        .banner-container {
+            background: linear-gradient(135deg, #1a5f2a 0%, #2d8a3e 50%, #1a5f2a 100%);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(26, 95, 42, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .banner-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: shine 8s linear infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .banner-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .banner-text {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.95);
+            line-height: 1.8;
+            max-width: 700px;
+            margin: 0 auto 25px auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .banner-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            color: #1a5f2a;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .banner-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .banner-cta i {
+            font-size: 1.2rem;
+        }
+        
+        .decorative-icons {
+            position: absolute;
+            font-size: 4rem;
+            color: rgba(255,255,255,0.1);
+            z-index: 0;
+        }
+        
+        .icon-left { left: 30px; top: 50%; transform: translateY(-50%); }
+        .icon-right { right: 30px; top: 50%; transform: translateY(-50%); }
+    </style>
+    <link rel="stylesheet" href="./index_files/all.min.css">
+</head>
+<body>
+    <div class="banner-container">
+        <i class="fas fa-handshake decorative-icons icon-left"></i>
+        <i class="fas fa-file-contract decorative-icons icon-right"></i>
+        
+        <h1 class="banner-title">🎉 Bem-vindo ao NGC Serviços</h1>
+        
+        <p class="banner-text">
+            Este espaço foi criado para facilitar o dia a dia dos servidores, reunindo em um só lugar os links, orientações e informações essenciais para as atividades dos Núcleos.
+        </p>
+        
+        <div class="banner-cta">
+            <i class="fas fa-search"></i>
+            Consulte, acesse e encontre o que precisa com agilidade!
+        </div>
+    </div>
+
+
+</body></html>
