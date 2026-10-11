@@ -1,11 +1,14 @@
 # Gera a vinheta SEGOV com fundo verde do Estado e escrita em branco.
-# Uso: python3 gerar_video_verde.py | ffmpeg -f rawvideo -pix_fmt rgb24 -s 1280x720 -r 30 -i - ... saida.mp4
+# Uso: LARGURA=1920 python3 gerar_video_verde.py | ffmpeg -f rawvideo -pix_fmt rgb24 -s 1920x1080 -r 30 -i - ... saida.mp4
+# (LARGURA define a resolução 16:9; padrão 1280x720)
 import sys, os, math, numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(AQUI, 'assets')
-W, H, FPS, DUR = 1280, 720, 30, 10.0
+W = int(os.environ.get('LARGURA', 1280)); H = W * 9 // 16
+K = W / 1280                                       # escala das medidas (desenhadas em 1280x720)
+FPS, DUR = 30, 10.0
 N = int(FPS * DUR)
 
 VERDE_CLARO = np.array([0, 132, 61], np.float32)    # #00843D
@@ -28,10 +31,10 @@ FUNDO = VERDE_CLARO * (1 - mix) + VERDE_ESCURO * mix
 def fundo(t):
     bg = FUNDO.copy()
     # faixas de luz diagonais que atravessam a tela (transição de abertura)
-    for k, (t0, larg, forca) in enumerate([(0.0, 260, 38), (0.35, 140, 26), (5.6, 320, 18)]):
+    for k, (t0, larg, forca) in enumerate([(0.0, 260 * K, 38), (0.35, 140 * K, 26), (5.6, 320 * K, 18)]):
         p = prog(t, t0, t0 + 1.6)
         if 0 < p < 1:
-            pos = -600 + p * (W + 1200)
+            pos = -600 * K + p * (W + 1200 * K)
             d = (xx + yy * 0.55 - pos) / larg
             bg += (np.exp(-d * d) * forca * math.sin(p * math.pi))[..., None]
     # entrada: escurecido para o verde
@@ -40,7 +43,7 @@ def fundo(t):
 
 # ---------- elementos (logotipo oficial em branco, PNG transparente) ----------
 logo = Image.open(os.path.join(ASSETS, 'logo_segov_branco.png')).convert('RGBA')
-LARG_LOGO = 1000                                   # largura final do logotipo na tela
+LARG_LOGO = 1000 * K                                   # largura final do logotipo na tela
 SC = LARG_LOGO / logo.width
 logo_g = logo.resize((round(logo.width * SC), round(logo.height * SC)), Image.LANCZOS)
 def s(v): return round(v * SC)
@@ -72,7 +75,7 @@ def camada_texto(t):
     for i, (peca, x) in enumerate(pecas_letras):
         p = ease_out(prog(t, 2.6 + i * 0.11, 3.35 + i * 0.11))
         if p <= 0: continue
-        dy = int((1 - p) * (tit_h + 30))
+        dy = int((1 - p) * (tit_h + 30 * K))
         vis = peca.crop((0, 0, peca.width, max(0, peca.height - dy)))
         if vis.height == 0: continue
         vis = vis.point(lambda v, k=min(1, p * 1.5): int(v * k))
@@ -81,10 +84,10 @@ def camada_texto(t):
     ps = prog(t, 3.9, 5.0)
     if ps > 0:
         sm = Image.new('L', (W, H), 0)
-        sobe = int((1 - ease_out(ps)) * 14)
+        sobe = int((1 - ease_out(ps)) * 14 * K)
         sm.paste(peca_sub, (TX, Y0 + s(SUB_ROWS[0]) + sobe))
-        frente = TX - 80 + ease_in_out(ps) * (tit_w + 160)
-        rampa = np.clip((frente - np.arange(W, dtype=np.float32)) / 80.0, 0, 1)
+        frente = TX - 80 * K + ease_in_out(ps) * (tit_w + 160 * K)
+        rampa = np.clip((frente - np.arange(W, dtype=np.float32)) / (80.0 * K), 0, 1)
         cort = Image.fromarray((np.tile(rampa, (H, 1)) * 255).astype(np.uint8))
         m = ImageChops.lighter(m, ImageChops.multiply(sm, cort))
     return m
@@ -115,8 +118,8 @@ def quadro(i):
         by = int(fy)
         # sombra suave
         sh = Image.new('L', (W, H), 0)
-        ImageDraw.Draw(sh).rectangle((bx + 6, by + 10, bx + fw + 6, by + fh + 10), fill=110)
-        sh = sh.filter(ImageFilter.GaussianBlur(14))
+        ImageDraw.Draw(sh).rectangle((bx + 6 * K, by + 10 * K, bx + fw + 6 * K, by + fh + 10 * K), fill=110)
+        sh = sh.filter(ImageFilter.GaussianBlur(14 * K))
         img = Image.composite(Image.new('RGB', (W, H), (0, 30, 12)), img, sh)
         img.paste(b, (bx, by))
         ImageDraw.Draw(flag_mask).rectangle((bx, by, bx + fw - 1, by + fh - 1), fill=255)
@@ -125,8 +128,8 @@ def quadro(i):
     pr = prog(t, 1.45, 2.4)
     if 0 < pr < 1:
         cx, cy = fx + FLAG_W * esc / 2, fy + FLAG_H * esc / 2
-        r = 60 + ease_out(pr) * 900
-        d = np.abs(np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2) - r) / (18 + 40 * pr)
+        r = (60 + ease_out(pr) * 900) * K
+        d = np.abs(np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2) - r) / ((18 + 40 * pr) * K)
         anel = np.exp(-d * d) * 120 * (1 - pr)
         a = np.asarray(img, np.float32) + anel[..., None]
         img = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
@@ -134,16 +137,16 @@ def quadro(i):
     # ----- texto branco com sombra leve
     tm = camada_texto(t)
     if tm.getbbox():
-        sh = tm.filter(ImageFilter.GaussianBlur(6)).point(lambda v: v * 0.45)
-        sh = ImageChops.offset(sh, 3, 5)
+        sh = tm.filter(ImageFilter.GaussianBlur(6 * K)).point(lambda v: v * 0.45)
+        sh = ImageChops.offset(sh, round(3 * K), round(5 * K))
         img = Image.composite(Image.new('RGB', (W, H), (0, 30, 12)), img, sh)
         img = Image.composite(Image.new('RGB', (W, H), BRANCO), img, tm)
 
     # ----- reflexo de luz que passa sobre o logotipo inteiro
     pb = prog(t, 5.6, 6.7)
     if 0 < pb < 1:
-        pos = X0 - 300 + pb * (grupo_w + 600)
-        d = (xx - pos - (yy - H / 2) * 0.35) / 45
+        pos = X0 - 300 * K + pb * (grupo_w + 600 * K)
+        d = (xx - pos - (yy - H / 2) * 0.35) / (45 * K)
         faixa = np.exp(-d * d) * 0.75
         alfa = np.maximum(np.asarray(tm, np.float32), np.asarray(flag_mask, np.float32)) / 255.0
         a = np.asarray(img, np.float32)
