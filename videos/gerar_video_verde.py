@@ -1,7 +1,7 @@
 # Gera a vinheta SEGOV com fundo verde do Estado e escrita em branco.
 # Uso: python3 gerar_video_verde.py | ffmpeg -f rawvideo -pix_fmt rgb24 -s 1280x720 -r 30 -i - ... saida.mp4
 import sys, os, math, numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
+from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(AQUI, 'assets')
@@ -38,71 +38,51 @@ def fundo(t):
     bg *= 0.35 + 0.65 * ease_out(prog(t, 0.0, 1.0))
     return bg
 
-# ---------- elementos ----------
-bandeira = Image.open(os.path.join(ASSETS, 'bandeira_sc.png')).convert('RGB')
-f_black = ImageFont.truetype(os.path.join(ASSETS, 'Montserrat-Black.ttf'), 168)
-f_bold = ImageFont.truetype(os.path.join(ASSETS, 'Montserrat-Bold.ttf'), 40)
+# ---------- elementos (logotipo oficial em branco, PNG transparente) ----------
+logo = Image.open(os.path.join(ASSETS, 'logo_segov_branco.png')).convert('RGBA')
+LARG_LOGO = 1000                                   # largura final do logotipo na tela
+SC = LARG_LOGO / logo.width
+logo_g = logo.resize((round(logo.width * SC), round(logo.height * SC)), Image.LANCZOS)
+def s(v): return round(v * SC)
 
-TITULO, SUB = 'SEGOV', 'SECRETARIA DE GOVERNO'
-asc, desc = f_black.getmetrics()
-tb = f_black.getbbox(TITULO)
-tit_w, tit_top, tit_h = tb[2] - tb[0], tb[1], tb[3] - tb[1]
+# recortes no PNG original (pixels): bandeira, letras S-E-G-O-V e subtítulo
+FLAG_BOX = (0, 1, 209, 153)                        # parte opaca da bandeira
+LETRAS_COLS = [(215, 318), (318, 400), (400, 510), (510, 634), (634, 749)]
+TIT_ROWS, SUB_ROWS = (0, 116), (116, logo.height)
 
-# subtítulo com espaçamento entre letras ajustado à largura do título
-sub_letras = list(SUB)
-larg_sem = sum(f_bold.getlength(c) for c in sub_letras)
-track = (tit_w - larg_sem) / (len(sub_letras) - 1)
-sb = f_bold.getbbox('S')
-sub_h = sb[3] - sb[1]
+bandeira = logo.crop(FLAG_BOX).convert('RGB')
+bandeira_hd = bandeira.resize((bandeira.width * 3, bandeira.height * 3), Image.LANCZOS)
+FLAG_W, FLAG_H = s(FLAG_BOX[2] - FLAG_BOX[0]), s(FLAG_BOX[3] - FLAG_BOX[1])
+alfa = logo_g.getchannel('A')
+pecas_letras = [(alfa.crop((s(c0), s(TIT_ROWS[0]), s(c1), s(TIT_ROWS[1]))), s(c0)) for c0, c1 in LETRAS_COLS]
+peca_sub = alfa.crop((s(215), s(SUB_ROWS[0]), logo_g.width, logo_g.height))
 
-GAP_LINHA, GAP_SUB = 22, 20
-texto_h = tit_h + GAP_LINHA + 4 + GAP_SUB + sub_h
-FLAG_H = texto_h
-FLAG_W = round(FLAG_H * bandeira.width / bandeira.height)
-GAP_FT = 46
-grupo_w = FLAG_W + GAP_FT + tit_w
-X0 = (W - grupo_w) // 2
-Y0 = (H - texto_h) // 2
-FX, FY = X0, Y0                       # posição final da bandeira
-TX = X0 + FLAG_W + GAP_FT             # x do texto
-LINHA_Y = Y0 + tit_h + GAP_LINHA
-SUB_Y = LINHA_Y + 4 + GAP_SUB
-
-# letras do título (posição de cada uma, com kerning)
-letras = []
-for i, c in enumerate(TITULO):
-    x = TX - tb[0] + f_black.getlength(TITULO[:i])
-    letras.append((c, x))
+X0 = (W - logo_g.width) // 2
+Y0 = (H - logo_g.height) // 2
+FX, FY = X0, Y0 + s(FLAG_BOX[1])     # posição final da bandeira
+TX = X0 + s(215)                      # x inicial do texto
+tit_h = s(TIT_ROWS[1] - TIT_ROWS[0])
+tit_w = logo_g.width - s(215)
+grupo_w = logo_g.width
 
 def camada_texto(t):
-    """Desenha título, linha e subtítulo em branco (máscara L) para o instante t."""
+    """Máscara (L) do texto branco do logotipo no instante t."""
     m = Image.new('L', (W, H), 0)
-    d = ImageDraw.Draw(m)
-    # título: cada letra sobe de trás de uma "janela" (máscara), em sequência
-    for i, (c, x) in enumerate(letras):
+    # título: cada letra sobe de trás de uma "janela", em sequência
+    for i, (peca, x) in enumerate(pecas_letras):
         p = ease_out(prog(t, 2.6 + i * 0.11, 3.35 + i * 0.11))
         if p <= 0: continue
-        dy = (1 - p) * (tit_h + 30)
-        lm = Image.new('L', (W, H), 0)
-        ImageDraw.Draw(lm).text((x, Y0 - tit_top + dy), c, font=f_black, fill=int(255 * min(1, p * 1.5)))
-        jan = Image.new('L', (W, H), 0)
-        ImageDraw.Draw(jan).rectangle((0, 0, W, Y0 + tit_h + 2), fill=255)
-        m = ImageChops.lighter(m, ImageChops.multiply(lm, jan))
-    d = ImageDraw.Draw(m)
-    # linha fina que cresce da esquerda para a direita
-    pl = ease_in_out(prog(t, 3.5, 4.3))
-    if pl > 0:
-        d.rectangle((TX, LINHA_Y, TX + int(tit_w * pl), LINHA_Y + 3), fill=255)
-    # subtítulo: revelado por uma cortina suave da esquerda para a direita
-    ps = prog(t, 4.0, 5.1)
+        dy = int((1 - p) * (tit_h + 30))
+        vis = peca.crop((0, 0, peca.width, max(0, peca.height - dy)))
+        if vis.height == 0: continue
+        vis = vis.point(lambda v, k=min(1, p * 1.5): int(v * k))
+        m.paste(vis, (X0 + x, Y0 + dy), vis)
+    # subtítulo: sobe levemente e é revelado por uma cortina da esquerda para a direita
+    ps = prog(t, 3.9, 5.0)
     if ps > 0:
         sm = Image.new('L', (W, H), 0)
-        sd = ImageDraw.Draw(sm)
-        x = TX
-        sobe = (1 - ease_out(ps)) * 14
-        for c in sub_letras:
-            sd.text((x, SUB_Y - sb[1] + sobe), c, font=f_bold, fill=255)
-            x += f_bold.getlength(c) + track
+        sobe = int((1 - ease_out(ps)) * 14)
+        sm.paste(peca_sub, (TX, Y0 + s(SUB_ROWS[0]) + sobe))
         frente = TX - 80 + ease_in_out(ps) * (tit_w + 160)
         rampa = np.clip((frente - np.arange(W, dtype=np.float32)) / 80.0, 0, 1)
         cort = Image.fromarray((np.tile(rampa, (H, 1)) * 255).astype(np.uint8))
@@ -127,7 +107,7 @@ def quadro(i):
         sx = max(0.02, ease_back(pf))
         fw = max(2, int(FLAG_W * esc * min(sx, 1.08)))
         fh = int(FLAG_H * esc)
-        b = bandeira.resize((fw, fh), Image.LANCZOS)
+        b = bandeira_hd.resize((fw, fh), Image.LANCZOS)
         # brilho na face durante o giro
         if pf < 1:
             b = Image.blend(b, Image.new('RGB', b.size, BRANCO), 0.45 * (1 - pf))
