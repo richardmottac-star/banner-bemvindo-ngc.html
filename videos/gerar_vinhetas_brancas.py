@@ -1,5 +1,5 @@
 # Vinhetas SEGOV no estilo "fundo branco": logotipo com texto escuro em relevo e bandeira colorida.
-# Uso: LARGURA=1920 python3 gerar_vinhetas_brancas.py <linha|queda|circulo|persiana> \
+# Uso: LARGURA=1920 [RELEVO=0] python3 gerar_vinhetas_brancas.py <linha|queda|circulo|persiana> \
 #        | ffmpeg -f rawvideo -pix_fmt rgb24 -s 1920x1080 -r 30 -i - -an ... saida.mp4
 import sys, os, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +29,8 @@ def logo_escuro():
 
 LOGO = logo_escuro()
 LX, LY = base.X0, base.Y0
-PROF = max(2, round(7 * K))                          # profundidade do relevo (px)
+# profundidade do relevo 3D da bandeira (px); RELEVO=0 gera o logotipo plano
+PROF = round(float(os.environ.get('RELEVO', 7)) * K)
 
 def relevo(peca, prof):
     """Peça RGBA com espessura 3D (camadas escurecidas para baixo/direita)."""
@@ -152,7 +153,7 @@ def quadro_queda(i):
         img = colar(img, relevo(peca, PROF), (LX + x, int(y)), sombra=quique(p))
     ps = ease_out(prog(t, 3.0, 3.8))
     if ps > 0:
-        c = relevo(SUBT, max(1, PROF // 3))
+        c = relevo(SUBT, PROF // 3)
         c.putalpha(c.getchannel('A').point(lambda v, k=ps: int(v * k)))
         img = colar(img, c, (LX + s(212) - int((1 - ps) * 120 * K), LY + s(base.SUB_ROWS[0])), sombra=ps * 0.6)
     img = brilho(img, ALFA_FINAL, prog(t, 4.6, 5.6))
