@@ -36,7 +36,7 @@ def relevo(peca, prof):
     """Peça RGBA com espessura 3D (camadas escurecidas para baixo/direita)."""
     prof = int(prof)
     if prof <= 0:
-        return peca
+        return peca.copy()                           # cópia: quem chama pode alterar a transparência
     out = Image.new('RGBA', (peca.width + prof, peca.height + prof), (0, 0, 0, 0))
     lado = np.asarray(peca).astype(np.float32)
     # só a bandeira (partes coloridas/brancas) ganha espessura; o texto preto mantém o desenho oficial
